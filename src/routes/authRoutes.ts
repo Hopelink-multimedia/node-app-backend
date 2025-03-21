@@ -1,15 +1,14 @@
-import { Router, Request, Response } from "express";
+import express, { Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import User from "../models/user"; // Ensure this is correct
+import User from "../models/user";
 
-const router = Router();
+const router = express.Router();
 
-// Explicitly define request and response types
 router.post("/signup", async (req: Request, res: Response): Promise<void> => {
     try {
         const { email, newPassword, confirmPassword } = req.body;
 
-        // Check if all required fields are provided
+        // Validate required fields
         if (!email || !newPassword || !confirmPassword) {
             res.status(400).json({ message: "All fields are required." });
             return;
@@ -28,17 +27,18 @@ router.post("/signup", async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        // Check if the user already exists
+        // Check if user already exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             res.status(400).json({ message: "User already exists." });
             return;
         }
 
-        // Hash the password before saving
+        // Hash the password
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        const user = new User({ email, password: hashedPassword });
 
+        // Create new user
+        const user = new User({ email, password: hashedPassword });
         await user.save();
 
         res.status(201).json({ message: "User registered successfully." });

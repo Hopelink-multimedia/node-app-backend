@@ -12,15 +12,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
+const express_1 = __importDefault(require("express"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
-const user_1 = __importDefault(require("../models/user")); // Ensure this is correct
-const router = (0, express_1.Router)();
-// Explicitly define request and response types
+const user_1 = __importDefault(require("../models/user"));
+const router = express_1.default.Router();
 router.post("/signup", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { email, newPassword, confirmPassword } = req.body;
-        // Check if all required fields are provided
+        // Validate required fields
         if (!email || !newPassword || !confirmPassword) {
             res.status(400).json({ message: "All fields are required." });
             return;
@@ -36,14 +35,15 @@ router.post("/signup", (req, res) => __awaiter(void 0, void 0, void 0, function*
             res.status(400).json({ message: "Passwords do not match." });
             return;
         }
-        // Check if the user already exists
+        // Check if user already exists
         const existingUser = yield user_1.default.findOne({ email });
         if (existingUser) {
             res.status(400).json({ message: "User already exists." });
             return;
         }
-        // Hash the password before saving
+        // Hash the password
         const hashedPassword = yield bcryptjs_1.default.hash(newPassword, 10);
+        // Create new user
         const user = new user_1.default({ email, password: hashedPassword });
         yield user.save();
         res.status(201).json({ message: "User registered successfully." });
