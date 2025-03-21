@@ -7,20 +7,41 @@ const router = Router();
 // Explicitly define request and response types
 router.post("/signup", async (req: Request, res: Response): Promise<void> => {
     try {
-        const { name, email, password } = req.body;
+        const { email, newPassword, confirmPassword } = req.body;
 
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            res.status(400).json({ message: "User already exists" });
+        // Check if all required fields are provided
+        if (!email || !newPassword || !confirmPassword) {
+            res.status(400).json({ message: "All fields are required." });
             return;
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const user = new User({ name, email, password: hashedPassword });
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            res.status(400).json({ message: "Invalid email format." });
+            return;
+        }
+
+        // Check if passwords match
+        if (newPassword !== confirmPassword) {
+            res.status(400).json({ message: "Passwords do not match." });
+            return;
+        }
+
+        // Check if the user already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            res.status(400).json({ message: "User already exists." });
+            return;
+        }
+
+        // Hash the password before saving
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        const user = new User({ email, password: hashedPassword });
 
         await user.save();
 
-        res.status(201).json({ message: "User registered successfully" });
+        res.status(201).json({ message: "User registered successfully." });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Server error", error });

@@ -19,16 +19,34 @@ const router = (0, express_1.Router)();
 // Explicitly define request and response types
 router.post("/signup", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { name, email, password } = req.body;
-        const existingUser = yield user_1.default.findOne({ email });
-        if (existingUser) {
-            res.status(400).json({ message: "User already exists" });
+        const { email, newPassword, confirmPassword } = req.body;
+        // Check if all required fields are provided
+        if (!email || !newPassword || !confirmPassword) {
+            res.status(400).json({ message: "All fields are required." });
             return;
         }
-        const hashedPassword = yield bcryptjs_1.default.hash(password, 10);
-        const user = new user_1.default({ name, email, password: hashedPassword });
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            res.status(400).json({ message: "Invalid email format." });
+            return;
+        }
+        // Check if passwords match
+        if (newPassword !== confirmPassword) {
+            res.status(400).json({ message: "Passwords do not match." });
+            return;
+        }
+        // Check if the user already exists
+        const existingUser = yield user_1.default.findOne({ email });
+        if (existingUser) {
+            res.status(400).json({ message: "User already exists." });
+            return;
+        }
+        // Hash the password before saving
+        const hashedPassword = yield bcryptjs_1.default.hash(newPassword, 10);
+        const user = new user_1.default({ email, password: hashedPassword });
         yield user.save();
-        res.status(201).json({ message: "User registered successfully" });
+        res.status(201).json({ message: "User registered successfully." });
     }
     catch (error) {
         console.error(error);
