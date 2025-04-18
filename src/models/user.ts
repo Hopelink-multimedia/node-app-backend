@@ -1,7 +1,23 @@
-import mongoose from "mongoose";
+// models/user.ts
+
+import mongoose, { Document, Schema } from "mongoose";
 import MyUtil from "../util/my_util";
 
-const UserSchema = new mongoose.Schema({
+// 1. Define the interface for User
+export interface IUser extends Document {
+    createdDate: Date;
+    userId: string;
+    displayName?: string;
+    email: string[];        // array of emails
+    password: string;
+    roleArray: string[];
+    phoneArray: string[];
+    phoneGuestArray: string[];
+    isActive: boolean;
+}
+
+// 2. Define schema
+const UserSchema = new Schema<IUser>({
     createdDate: {
         type: Date,
         default: Date.now
@@ -22,6 +38,7 @@ const UserSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
-}, {collection: "User"});
+}, { collection: "User" });
 
-export default mongoose.model("User", UserSchema);
+// 3. Export model with IUser
+export default mongoose.model<IUser>("User", UserSchema);

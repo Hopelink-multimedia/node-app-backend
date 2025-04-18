@@ -53,4 +53,34 @@ router.post("/signup", (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.status(500).json({ message: "Server error", error });
     }
 }));
+router.post("/login", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            res.status(400).json({ message: "Email and password are required." });
+            return;
+        }
+        // Find user by email
+        const user = yield user_1.default.findOne({ email: { $in: [email] } });
+        if (!user) {
+            res.status(401).json({ message: "Invalid email or password." });
+            return;
+        }
+        const isMatch = yield bcryptjs_1.default.compare(password, user.password);
+        if (!isMatch) {
+            res.status(401).json({ message: "Invalid email or password." });
+            return;
+        }
+        res.status(200).json({
+            message: "Login successful",
+            userId: user.userId,
+            email: user.email,
+            displayName: user.displayName,
+        });
+    }
+    catch (error) {
+        console.error("Login Error:", error);
+        res.status(500).json({ message: "Server error", error });
+    }
+}));
 exports.default = router;

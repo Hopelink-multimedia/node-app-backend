@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import User from "../models/user";
+import User, {IUser} from "../models/user";
 
 const router = express.Router();
 
@@ -44,6 +44,41 @@ router.post("/signup", async (req: Request, res: Response): Promise<void> => {
         res.status(201).json({ message: "User registered successfully." });
     } catch (error) {
         console.error(error);
+        res.status(500).json({ message: "Server error", error });
+    }
+});
+
+router.post("/login", async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            res.status(400).json({ message: "Email and password are required." });
+            return;
+        }
+
+        // Find user by email
+        const user = await User.findOne({ email: { $in: [email] } }) as IUser | null;
+
+        if (!user) {
+            res.status(401).json({ message: "Invalid email or password." });
+            return;
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            res.status(401).json({ message: "Invalid email or password." });
+            return;
+        }
+
+        res.status(200).json({
+            message: "Login successful",
+            userId: user.userId,
+            email: user.email,
+            displayName: user.displayName,
+        });
+    } catch (error) {
+        console.error("Login Error:", error);
         res.status(500).json({ message: "Server error", error });
     }
 });
