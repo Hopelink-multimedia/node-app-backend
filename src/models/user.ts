@@ -1,8 +1,21 @@
 import mongoose from "mongoose";
+import MyUtil from "../util/my_util";
 
 const UserSchema = new mongoose.Schema({
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true }, // Store only hashed password
-});
+    createdDate: {
+        type: Date,
+        default: Date.now
+    },
+    userId: {
+        type: String,
+        default: function () {
+            return MyUtil.getMongooseId();
+        }
+    },
+    displayName: String,
+    email: [String],
+    password: String,
+    roleArray: [String],
+}, {collection: "User"});
 
 export default mongoose.model("User", UserSchema);
