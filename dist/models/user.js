@@ -20,5 +20,11 @@ const UserSchema = new mongoose_1.default.Schema({
     email: [String],
     password: String,
     roleArray: [String],
+    phoneArray: [String],
+    phoneGuestArray: [String],
+    isActive: {
+        type: Boolean,
+        default: true
+    },
 }, { collection: "User" });
 exports.default = mongoose_1.default.model("User", UserSchema);

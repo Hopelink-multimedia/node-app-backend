@@ -16,6 +16,12 @@ const UserSchema = new mongoose.Schema({
     email: [String],
     password: String,
     roleArray: [String],
+    phoneArray: [String],
+    phoneGuestArray: [String],
+    isActive: {
+        type: Boolean,
+        default: true
+    },
 }, {collection: "User"});
 
 export default mongoose.model("User", UserSchema);
