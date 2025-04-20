@@ -15,6 +15,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const user_1 = __importDefault(require("../models/user"));
+const donar_model_1 = __importDefault(require("../models/donar_model"));
+const response_controller_1 = __importDefault(require("../util/response_controller"));
 const router = express_1.default.Router();
 router.post("/signup", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -81,6 +83,29 @@ router.post("/login", (req, res) => __awaiter(void 0, void 0, void 0, function* 
     catch (error) {
         console.error("Login Error:", error);
         res.status(500).json({ message: "Server error", error });
+    }
+}));
+// @ts-ignore
+router.post('/submit-donation-form', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const inputUser = req.body.user;
+        // Validate required fields
+        if (!(inputUser === null || inputUser === void 0 ? void 0 : inputUser.userId)) {
+            return res.json(response_controller_1.default.getFailureResponse("Invalid userId"));
+        }
+        if (!inputUser.fullName || !inputUser.dateOfBirth || !inputUser.phoneNumber) {
+            return res.json(response_controller_1.default.getFailureResponse("Missing required fields: fullName, dateOfBirth or phoneNumber"));
+        }
+        // Save donor to database
+        const donor = new donar_model_1.default(inputUser);
+        yield donor.save();
+        const result = response_controller_1.default.getSuccessResponse();
+        result.user = donor;
+        return res.json(result);
+    }
+    catch (err) {
+        console.error("Error submitting donation form:", err);
+        return res.json(response_controller_1.default.getFailureResponse("Server error"));
     }
 }));
 exports.default = router;
