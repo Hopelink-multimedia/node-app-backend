@@ -86,7 +86,7 @@ router.post("/login", (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 }));
 // @ts-ignore
-router.post('/submit-donation-form', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/submit_donation_form', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const inputUser = req.body.user;
         // Validate required fields
@@ -108,4 +108,42 @@ router.post('/submit-donation-form', (req, res) => __awaiter(void 0, void 0, voi
         return res.json(response_controller_1.default.getFailureResponse("Server error"));
     }
 }));
+// @ts-ignore
+router.post('/medmatch_score', (req, res) => {
+    const input = req.body;
+    // Validate inputs
+    const requiredFields = [
+        'bloodGroup', 'crossmatch', 'organAvailability', 'medicalHistory',
+        'age', 'size', 'location', 'urgency', 'donorWillingness'
+    ];
+    for (const field of requiredFields) {
+        if (typeof input[field] !== 'number') {
+            return res.status(400).json({ error: `Missing or invalid field: ${field}` });
+        }
+    }
+    const totalScore = input.bloodGroup +
+        input.crossmatch +
+        input.organAvailability +
+        input.medicalHistory +
+        input.age +
+        input.size +
+        input.location +
+        input.urgency +
+        input.donorWillingness;
+    const response = {
+        totalScore,
+        details: {
+            bloodGroup: input.bloodGroup,
+            crossmatch: input.crossmatch,
+            organAvailability: input.organAvailability,
+            medicalHistory: input.medicalHistory,
+            age: input.age,
+            size: input.size,
+            location: input.location,
+            urgency: input.urgency,
+            donorWillingness: input.donorWillingness,
+        }
+    };
+    return res.json(response);
+});
 exports.default = router;
