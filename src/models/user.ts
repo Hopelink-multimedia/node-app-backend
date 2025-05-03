@@ -14,6 +14,7 @@ export interface IUser extends Document {
     phoneArray: string[];
     phoneGuestArray: string[];
     isActive: boolean;
+    webSocket?: any;  // Add the webSocket property here
 }
 
 // 2. Define schema
@@ -38,6 +39,10 @@ const UserSchema = new Schema<IUser>({
         type: Boolean,
         default: true
     },
+    webSocket: {
+        type: Schema.Types.Mixed,  // Allow any type for WebSocket-related data
+        default: null
+    }
 }, { collection: "User" });
 
 // 3. Export model with IUser

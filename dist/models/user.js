@@ -61,6 +61,10 @@ const UserSchema = new mongoose_1.Schema({
         type: Boolean,
         default: true
     },
+    webSocket: {
+        type: mongoose_1.Schema.Types.Mixed, // Allow any type for WebSocket-related data
+        default: null
+    }
 }, { collection: "User" });
 // 3. Export model with IUser
 exports.default = mongoose_1.default.model("User", UserSchema);
